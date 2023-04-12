@@ -1,121 +1,103 @@
 
 close all
 
-G_acceleration=9.8;
-frame_boundary=[0,1000,0,1000];
-framerate=5;
-total_time=350;
+% initialize environment params
+G_acceleration=-9.8;
+frame_boundary=[0,1000,0,1000];%[left,right,bottom,top]
+slow_rate=1;
+max_iteration=300;
+
+% initialize objects(balls)
 N_objects=10;
 objects=struct;
 for n_obj=1:N_objects
-%if object is rectangle
-% objects(n_obj).height_width=[50,60];
-%if object is circle
-objects(n_obj).center_pos=2;%if object is circle
 objects(n_obj).radius=20;
-%followings needed for all objects
-objects(n_obj).initial_pos=[500,1000];
-objects(n_obj).mass=2;
-objects(n_obj).horizontal_velocity=1+10*rand();
-objects(n_obj).coefficient_of_restitution=0.1+0.6*rand();
-objects(n_obj).freefall_flag=1;
+objects(n_obj).initial_pos=[100+800*rand(),900];
+objects(n_obj).coefficient_of_restitution=0.5+0.3*rand();
 objects(n_obj).current_pos=objects(n_obj).initial_pos;
+objects(n_obj).boundary_limits=[0,1000,0,1000];%[bottom,top,left,right] % ball bouncing limit
 objects(n_obj).groundhit_time=0;
 objects(n_obj).bounce_count=0;
-objects(n_obj).counter_1=0;
-objects(n_obj).initial_loop_count=0;
-objects(n_obj).velocity_falling=0;
-objects(n_obj).distance_fallen=0;
-objects(n_obj).velocity_bouncing=0;
-objects(n_obj).distance_bounced=0;
+objects(n_obj).time_count=0;
 objects(n_obj).motion_flag=1;
+objects(n_obj).initial_v_velocity=0;
+objects(n_obj).initial_h_velocity=20*rand-10;
+objects(n_obj).v_velocity=0;
+objects(n_obj).h_velocity=objects(n_obj).initial_h_velocity;
+objects(n_obj).v_distance=0;
+
+objects(n_obj).boundary_limits(1)=objects(n_obj).boundary_limits(1)+objects(n_obj).radius;
+objects(n_obj).boundary_limits(2)=objects(n_obj).boundary_limits(2)-objects(n_obj).radius;
+objects(n_obj).boundary_limits(3)=objects(n_obj).boundary_limits(3)+objects(n_obj).radius;
+objects(n_obj).boundary_limits(4)=objects(n_obj).boundary_limits(4)-objects(n_obj).radius;
 end
 
+% initialize figure
 f1=figure;
 plot(frame_boundary(1:2),frame_boundary(3:4),'.')
 hold on
 
-for time=1:total_time
+% main loop starts
+for count=1:max_iteration
 clf;
 
 for n_obj=1:N_objects
 if objects(n_obj).motion_flag==1
-if objects(n_obj).freefall_flag==1
-    % -------------freefall stage----------
-    objects(n_obj).counter_1=objects(n_obj).counter_1+1;
-    objects(n_obj).velocity_falling=(G_acceleration/framerate)*objects(n_obj).counter_1;
-    objects(n_obj).distance_fallen=0.5*objects(n_obj).velocity_falling*objects(n_obj).counter_1;
-    current_Y_pos=objects(n_obj).initial_pos(2)-objects(n_obj).distance_fallen;
-    % to check if falling ball reaches ground position
-    if current_Y_pos<0
-        current_Y_pos=0;
-        objects(n_obj).freefall_flag=0;
-        objects(n_obj).groundhit_time=time;
-        objects(n_obj).velocity_bouncing=objects(n_obj).velocity_falling;
-        counter_new=round(objects(n_obj).counter_1*log(1+10*objects(n_obj).coefficient_of_restitution)/log(11));
-%         counter_new=round(objects(n_obj).counter_1*objects(n_obj).coefficient_of_restitution);
-        objects(n_obj).counter_1=counter_new;
-    end
-    objects(n_obj).current_pos(2)=current_Y_pos;
-    % add horizontal movement
-    if objects(n_obj).bounce_count>0
-        objects(n_obj).current_pos(1)=objects(n_obj).current_pos(1)+objects(n_obj).horizontal_velocity;
-    end
-    % to check if object reach the horizontal right boundary
-    if (objects(n_obj).current_pos(1)+objects(n_obj).radius)>=frame_boundary(4)
-        objects(n_obj).current_pos(1)=frame_boundary(4)-objects(n_obj).radius;
-        objects(n_obj).horizontal_velocity=objects(n_obj).horizontal_velocity*(-1);%to inverse the sign
-    end
-    % to check if object reach the horizontal left boundary
-    if (objects(n_obj).current_pos(1)-objects(n_obj).radius)<=frame_boundary(3)
-        objects(n_obj).current_pos(1)=frame_boundary(3)+objects(n_obj).radius;
-        objects(n_obj).horizontal_velocity=objects(n_obj).horizontal_velocity*(-1);%to inverse the sign
-    end
-else
-    objects(n_obj).counter_1=objects(n_obj).counter_1-1;
-    % ------------bouncing stage-----------
-    objects(n_obj).velocity_bouncing=(G_acceleration/framerate)*objects(n_obj).counter_1;
-    objects(n_obj).distance_bounced=0.5*objects(n_obj).velocity_bouncing*objects(n_obj).counter_1;
-    objects(n_obj).distance_bounced=objects(n_obj).initial_pos(2)-objects(n_obj).distance_bounced;
-    current_Y_pos=objects(n_obj).distance_bounced*objects(n_obj).coefficient_of_restitution;
-    if current_Y_pos<0
-        current_Y_pos=0;
-    end
-    objects(n_obj).current_pos(2)=current_Y_pos;
-    % add horizontal movement
-    objects(n_obj).current_pos(1)=objects(n_obj).current_pos(1)+objects(n_obj).horizontal_velocity;
-    % to check if object reach the horizontal right boundary
-    if (objects(n_obj).current_pos(1)+objects(n_obj).radius)>=frame_boundary(4)
-        objects(n_obj).current_pos(1)=frame_boundary(4)-objects(n_obj).radius;
-        objects(n_obj).horizontal_velocity=objects(n_obj).horizontal_velocity*(-1);%to inverse the sign
-    end
-    % to check if object reach the horizontal left boundary
-    if (objects(n_obj).current_pos(1)-objects(n_obj).radius)<=frame_boundary(3)
-        objects(n_obj).current_pos(1)=frame_boundary(3)+objects(n_obj).radius;
-        objects(n_obj).horizontal_velocity=objects(n_obj).horizontal_velocity*(-1);%to inverse the sign
-    end
-    % to check if bouncing ball reaches maximum vertical position
-    if objects(n_obj).velocity_bouncing<0
-        objects(n_obj).velocity_bouncing=0;
+
+    % position calculations
+    objects(n_obj).v_velocity=objects(n_obj).initial_v_velocity+G_acceleration*objects(n_obj).time_count;
+    objects(n_obj).v_distance=objects(n_obj).initial_v_velocity*objects(n_obj).time_count+0.5*G_acceleration*objects(n_obj).time_count*objects(n_obj).time_count;
+    objects(n_obj).current_pos(2)=objects(n_obj).initial_pos(2)+objects(n_obj).v_distance;
+    objects(n_obj).current_pos(1)=objects(n_obj).current_pos(1)+objects(n_obj).h_velocity;
+    objects(n_obj).time_count=objects(n_obj).time_count+(1/slow_rate);
+
+    %to check if ball reached boundary limit(bottom)
+    if objects(n_obj).current_pos(2)<(objects(n_obj).boundary_limits(1))
+        objects(n_obj).time_count=0;
+        objects(n_obj).initial_v_velocity=objects(n_obj).v_velocity*objects(n_obj).coefficient_of_restitution;
+        objects(n_obj).initial_v_velocity=-objects(n_obj).initial_v_velocity;
+        objects(n_obj).h_velocity=objects(n_obj).h_velocity*objects(n_obj).coefficient_of_restitution;
+        objects(n_obj).groundhit_time=objects(n_obj).time_count;
         objects(n_obj).bounce_count=objects(n_obj).bounce_count+1;
-        objects(n_obj).freefall_flag=1;
-        if objects(n_obj).current_pos(2)<1e-5
-            objects(n_obj).initial_pos(2)=0;
-            objects(n_obj).motion_flag=0;
-        else
-            objects(n_obj).initial_pos=objects(n_obj).current_pos;
-        end
+        objects(n_obj).initial_pos(2)=objects(n_obj).boundary_limits(1);
+        objects(n_obj).current_pos(2)=objects(n_obj).initial_pos(2);
+    end
+    %to check if ball reached boundary limit(top)
+    if objects(n_obj).current_pos(2)>(objects(n_obj).boundary_limits(2))
+        objects(n_obj).time_count=0;
+        objects(n_obj).initial_v_velocity=objects(n_obj).v_velocity*objects(n_obj).coefficient_of_restitution;
+        objects(n_obj).initial_v_velocity=-objects(n_obj).initial_v_velocity;
+        objects(n_obj).h_velocity=objects(n_obj).h_velocity*objects(n_obj).coefficient_of_restitution;
+        objects(n_obj).bounce_count=objects(n_obj).bounce_count+1;
+        objects(n_obj).initial_pos(2)=objects(n_obj).boundary_limits(2);
+        objects(n_obj).current_pos(2)=objects(n_obj).initial_pos(2);
+    end
+
+    %to check if ball reached boundary limit(left)
+    if objects(n_obj).current_pos(1)<=(objects(n_obj).boundary_limits(3))
+        objects(n_obj).h_velocity=objects(n_obj).h_velocity*objects(n_obj).coefficient_of_restitution;
+        objects(n_obj).h_velocity=-objects(n_obj).h_velocity;
+        objects(n_obj).initial_pos(1)=objects(n_obj).boundary_limits(3);
+        objects(n_obj).current_pos(1)=objects(n_obj).initial_pos(1);
+    end
+    %to check if ball reached boundary limit(right)
+    if objects(n_obj).current_pos(1)>=(objects(n_obj).boundary_limits(4))
+        objects(n_obj).h_velocity=objects(n_obj).h_velocity*objects(n_obj).coefficient_of_restitution;
+        objects(n_obj).h_velocity=-objects(n_obj).h_velocity;
+        objects(n_obj).initial_pos(1)=objects(n_obj).boundary_limits(4);
+        objects(n_obj).current_pos(1)=objects(n_obj).initial_pos(1);
     end
 end
 
 end
-% disp(objects(n_obj).current_pos)
-end
+
+% plot all objects
 plot(frame_boundary(1:2),frame_boundary(3:4),'.')
 for n_obj=1:N_objects
-% rectangle('Position',[objects(n_obj).current_pos,objects(n_obj).height_width]);
-circle2(objects(n_obj).current_pos(1),objects(n_obj).current_pos(2)+objects(n_obj).radius,objects(n_obj).radius);
+circle2(objects(n_obj).current_pos(1),objects(n_obj).current_pos(2),objects(n_obj).radius);
 end
+
+% to add small delay (it helps to sustain the objects on the figure)
 pause(0.00001)
 
 end
